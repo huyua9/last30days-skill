@@ -211,7 +211,10 @@ class TestSearchBlueskyAuth(unittest.TestCase):
         refresh_call = mock_request.call_args_list[2]
         self.assertEqual(refresh_call.args[0], "POST")
         self.assertEqual(refresh_call.args[1], bluesky.BSKY_REFRESH_URL)
-        self.assertEqual(refresh_call.kwargs["json_data"], {"refreshJwt": "ref-old"})
+        self.assertEqual(refresh_call.kwargs["headers"], {"Authorization": "Bearer ref-old"})
+        self.assertNotIn("json_data", refresh_call.kwargs)
+        self.assertEqual(refresh_call.kwargs["retries"], 0)
+        self.assertEqual(bluesky._cached_refresh_token, "ref-new")
         search_call = mock_request.call_args_list[3]
         self.assertEqual(search_call.kwargs["headers"], {"Authorization": "Bearer tok-new"})
 

@@ -172,8 +172,9 @@ def _refresh_session(refresh_jwt: Optional[str]) -> Optional[str]:
         response = http.request(
             "POST",
             BSKY_REFRESH_URL,
-            json_data={"refreshJwt": refresh_jwt},
+            headers={"Authorization": f"Bearer {refresh_jwt}"},
             timeout=15,
+            retries=0,
         )
         token = response.get("accessJwt")
         if not token:
@@ -189,12 +190,12 @@ def _refresh_session(refresh_jwt: Optional[str]) -> Optional[str]:
         _session_error = (
             "Bluesky refresh token is invalid (401/400)"
             if e.status_code in (400, 401)
-            else f"Bluesky session refresh failed: {e}"
+            else f"Bluesky session refresh failed (HTTP {e.status_code})"
         )
         _log(f"Session refresh failed: {_session_error}")
         return None
     except Exception as e:
-        _session_error = f"Bluesky session refresh failed: {type(e).__name__}: {e}"
+        _session_error = f"Bluesky session refresh failed: {type(e).__name__}"
         _log(f"Session refresh failed: {_session_error}")
         return None
 
@@ -316,8 +317,8 @@ def search_bluesky(
         refreshed_token = _refresh_session(_cached_refresh_token)
         if refreshed_token:
             response, error_msg = _search_with_token(refreshed_token)
-        elif _refresh_error_status in (400, 401):
-            _log("Refresh token rejected; recreating session once")
+        elif not _cached_refresh_token or _refresh_error_status in (400, 401):
+            _log("Refresh token missing or rejected; recreating session once")
             _reset_session_cache()
             response, error_msg = _auth_and_search()
             if error_msg == "refresh":
